@@ -58,11 +58,11 @@ void setup() {
     paint.Clear(COLORED);
 
      Serial.print("Drawing:BlackImage\r\n ");
-     paint.DrawStringAt(0, 0, "e-Paper Demo", &Font24, UNCOLORED);
+     paint.DrawStringAt(0, 0, "e-Paper Demo", &Font20, UNCOLORED);
      epd.display_part(paint.GetImage(), 0, 0, paint.GetWidth(), paint.GetHeight());
      epd.lut_GC();
      epd.refresh();
-     delay(2000);
+     delay(5000);
     
     
     /*epd.display(IMAGE_DATA);
