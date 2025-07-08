@@ -11,8 +11,8 @@ IO pins are defined in global.h
 
 You need to provide a file "credentials.h" which gives your wifi login details.
 
-  #define SSID "Your_SSID" 
-  #define PWD "Your_wifi_pwd" 
+    #define SSID "Your_SSID" 
+    #define PWD "Your_wifi_pwd" 
 
 
 This project uses PlatformIO. To change the board if you aren't using an ESP32-Saola board
