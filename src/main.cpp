@@ -10,8 +10,11 @@
 #include "EPD_3in52.h"
 #include "imagedata.h"
 #include "epdpaint.h"
+#include "graphics.h"
+#include "credentials.h"
 
 #include "global.h"
+#include "main.h"
 
 #define COLORED     0
 #define UNCOLORED   1
@@ -26,6 +29,9 @@ uint8_t LastKey=0;
 uint8_t KeyHit=0;
 uint8_t KeyDn=0;
 
+Epd epd;
+
+
 // ----------------------------------------------------------------------------
 // Initialization
 // ----------------------------------------------------------------------------
@@ -34,7 +40,6 @@ void setup() {
     Serial.begin(115200);
     Serial.println("-BOOT-");
     
-    Epd epd;
     if (epd.Init() != 0) {
         Serial.print("e-Paper init failed");
         return;
