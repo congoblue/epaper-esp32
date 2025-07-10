@@ -8,7 +8,6 @@
 #include <esp_sleep.h>
 #include <SPI.h>
 #include "EPD_3in52.h"
-#include "imagedata.h"
 #include "epdpaint.h"
 #include "graphics.h"
 #include "credentials.h"
@@ -24,10 +23,6 @@
 // ----------------------------------------------------------------------------
 
 uint32_t PwrOnTimer=0;
-uint16_t KeyState=0;
-uint8_t LastKey=0;
-uint8_t KeyHit=0;
-uint8_t KeyDn=0;
 
 Epd epd;
 
@@ -56,28 +51,29 @@ void setup() {
 
     delay(2000);
 
-    UBYTE image[700];
-    Paint paint(image, 200, 25);    // width should be the multiple of 8   
+    SetRotate(ROTATE_90);
+    Clear(COLORED);
 
-    paint.SetRotate(ROTATE_0);
-    paint.Clear(COLORED);
-
-     Serial.print("Drawing:BlackImage\r\n ");
-     paint.DrawStringAt(0, 0, "e-Paper Demo", &Font20, UNCOLORED);
-     epd.display_part(paint.GetImage(), 0, 0, paint.GetWidth(), paint.GetHeight());
-     epd.lut_GC();
-     epd.refresh();
-     delay(5000);
-    
-    
-    /*epd.display(IMAGE_DATA);
+    Serial.print("Drawing:BlackImage\r\n ");
+    setfont(14,5);
+    align=ALIGN_CENTRE;
+    colour=1;
+    backcolour=0;
+    setxy(WIDTH/2,180);
+    putstr_align("Hello World");
+    setxy(WIDTH/2,220);
+    putstr_align("This is Waveshare e-paper display");
+    epd.display_part(GetImage(), 0, 0, HEIGHT, WIDTH); //width,height if not rotated
     epd.lut_GC();
     epd.refresh();
-    delay(2000);*/
+
+    delay(5000);
+    
+  
     
     Serial.print("clear and sleep......\r\n ");
-    epd.Clear();
-    delay(2000);
+    //epd.Clear();
+    //delay(2000);
     epd.sleep();
     Serial.print("end\r\n ");
 

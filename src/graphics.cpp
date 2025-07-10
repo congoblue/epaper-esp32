@@ -19,8 +19,8 @@
 int xp=0;
 int yp=0;
 
-int _width=320;
-int _height=240;
+int _width=WIDTH;
+int _height=HEIGHT;
 
 
 //font structure
@@ -308,7 +308,7 @@ const uint16_t wifi[]={
 
 void drawPixel(int x, int y, int col)
 {
-  epd.Draw
+  DrawPixel(x,y,col);
 }
 
 
@@ -435,7 +435,7 @@ void opset(unsigned int x, unsigned int y, unsigned char c)
 void opclrscr(void)
 {
    if (IsClr) return; //save time if already clr
-   fillScreen(backcolour);
+   Clear(backcolour);
    IsClr=1;
    xp=0;yp=0;
 }
@@ -531,7 +531,7 @@ void disp_putc_big(char c, char mag)
 
            for (m=0; m<mag;m++) {for (my=0; my<mag; my++) DrawPixel(xp+i*mag+m,yp+j*mag+my,cc);}
         }
-        for (m=0; m<mag;m++) {for (my=0; my<mag; my++) DrawPixel(xp+i*mag+m,yp+j*mag+my,color565(br,bg,bb));}; //1pix gap to right of char
+        for (m=0; m<mag;m++) {for (my=0; my<mag; my++) DrawPixel(xp+i*mag+m,yp+j*mag+my,backcolour);}; //1pix gap to right of char
      }
      xp+=mag*pcurrentfont->w[c-32]+mag;
      if (xp>=_width) {xp=0; yp+=pcurrentfont->ht+linespacing;}
@@ -719,7 +719,7 @@ void setxy(int x, int y)
 //---------------------------------------------------------
 //! display logo
 //---------------------------------------------------------
-void LogoDisplay(void)
+/*void LogoDisplay(void)
 {
   int x,y,txp,typ;
   uint16_t *dp;
@@ -736,7 +736,7 @@ void LogoDisplay(void)
     }
   }
 
-}
+}*/
 
 //---------------------------------------------------------
 //! display symbol
@@ -748,7 +748,7 @@ void SymbolDisplay(int px, int py, char v)
    char d;
    uint16_t fg;
 
-   fg=color565((colour>>16)&0xFF,(colour>>8)&0xFF,colour&0xFF);
+   fg=colour;
 
    if (v==0) p=arrowup;
    if (v==1) p=arrowdown;
@@ -794,113 +794,5 @@ void BitmapDisplay(uint8_t n, uint32_t txp, uint32_t typ)
     }
   }
 
-}
-
-
-//---------------------------------------------------------
-//! menu display routines
-//---------------------------------------------------------
-
-#define MENUBG 0x374B53
-#define MENULINEBG 0x8BA6CA
-#define MENUACTBG 0xF3EC84
-#define MENUFGLIGHT 0xFFFFFF
-#define MENUFGDARK 0x000000
-
-void disp_menuclear(void)
-{
-    fillRect(0,0,160,128,color565((MENUBG>>16)&0xFF,(MENUBG>>8)&0xFF,MENUBG&0xFF));
-    setxy(0,0);
-}
-
-void disp_putmenuline(char y, const char *s, char style)
-{
-   unsigned int bg, fg, oldbg=backcolour, oldfg=colour,w;
-   unsigned char old_align=align;
-   if (style&0x80) w=145; else w=160;
-   style&=0x7F;
-   if (style==0) {bg=MENUBG; fg=MENUFGLIGHT; align=ALIGN_CENTRE;}
-   else if (style==1) {bg=MENULINEBG; fg=MENUFGLIGHT; align=ALIGN_LEFT;}
-   else if (style==2) {bg=MENUACTBG; fg=MENUFGDARK; align=ALIGN_LEFT;}
-   fillRect(0,y*20,w,19,color565((bg>>16)&0xFF,(bg>>8)&0xFF,bg&0xFF));
-   setxy(2,y*20+4);
-   backcolour=bg; colour=fg;
-   putstr_align((char *)s);
-   backcolour=oldbg; colour=oldfg;
-}
-
-void disp_putmenupreview(const char *s, char style)
-{
-   unsigned int bg, fg, oldbg=backcolour, oldfg=colour,w;
-   unsigned char old_align=align;
-   setfont(8,7);
-   if (style&0x80) w=145; else w=160;
-   style&=0x7F;
-   if (style==0) {bg=MENUBG; fg=MENUFGLIGHT; align=ALIGN_CENTRE;}
-   else if (style==1) {bg=MENULINEBG; fg=MENUFGLIGHT; align=ALIGN_LEFT;}
-   else if (style==2) {bg=MENUACTBG; fg=MENUFGDARK; align=ALIGN_LEFT;}
-   backcolour=bg; colour=fg;
-   putstr((char *)s);
-   backcolour=oldbg; colour=oldfg;
-   setfont(14,5);
-}
-
-void disp_putmenuip(char y, char sel, uint32_t ip)
-{
-   unsigned int oldbg=backcolour, oldfg=colour,w;
-   char buf[8];
-   backcolour=MENULINEBG; colour=MENUFGLIGHT; 
-   fillRect(0,y*20,160,19,color565((backcolour>>16)&0xFF,(backcolour>>8)&0xFF,backcolour&0xFF)); //draw full back box
-   if (sel==0) {backcolour=MENUACTBG; colour=MENUFGDARK; fillRect(1,y*20,25,19,color565((backcolour>>16)&0xFF,(backcolour>>8)&0xFF,backcolour&0xFF));}
-   sprintf(buf,"%03d",ip&0xFF);
-   setxy(2,y*20+4);putstr(buf);
-   backcolour=MENULINEBG; colour=MENUFGLIGHT;   
-   setxy(27,y*20+4);putstr(".");
-   if (sel==1) {backcolour=MENUACTBG; colour=MENUFGDARK; fillRect(30,y*20,25,19,color565((backcolour>>16)&0xFF,(backcolour>>8)&0xFF,backcolour&0xFF));}
-   sprintf(buf,"%03d",(ip>>8)&0xFF);
-   setxy(31,y*20+4);putstr(buf);
-   backcolour=MENULINEBG; colour=MENUFGLIGHT;   
-   setxy(56,y*20+4);putstr(".");
-   if (sel==2) {backcolour=MENUACTBG; colour=MENUFGDARK; fillRect(59,y*20,25,19,color565((backcolour>>16)&0xFF,(backcolour>>8)&0xFF,backcolour&0xFF));}
-   sprintf(buf,"%03d",(ip>>16)&0xFF);
-   setxy(60,y*20+4);putstr(buf);
-   backcolour=MENULINEBG; colour=MENUFGLIGHT;   
-   setxy(87,y*20+4);putstr(".");
-   if (sel==3) {backcolour=MENUACTBG; colour=MENUFGDARK; fillRect(90,y*20,25,19,color565((backcolour>>16)&0xFF,(backcolour>>8)&0xFF,backcolour&0xFF));}
-   sprintf(buf,"%03d",(ip>>24)&0xFF);
-   setxy(91,y*20+4);putstr(buf);
-   
-   backcolour=oldbg; colour=oldfg;
-}
-
-
-void disp_menu_scrollbar(char typ)
-{
-   unsigned int oldfg=colour;
-   drawFastVLine(145, 20, 108, color565((MENUBG>>16)&0xFF,(MENUBG>>8)&0xFF,MENUBG&0xFF)); //separator line
-   drawFastVLine(146, 20, 108, color565((MENUBG>>16)&0xFF,(MENUBG>>8)&0xFF,MENUBG&0xFF)); //separator line
-   fillRect(147,20,16,99,color565((MENULINEBG>>16)&0xFF,(MENULINEBG>>8)&0xFF,MENULINEBG&0xFF));
-   colour=MENUFGLIGHT;
-   if (typ&1) SymbolDisplay(148,23,0); //up
-   if (typ&2) SymbolDisplay(148,102,1); //down
-   colour=oldfg;
-}
-
-void disp_info(char typ, char *s)
-{
-   unsigned int bg, fg, oldbg=backcolour, oldfg=colour,w;
-   
-   while (popuptimer>0) delay(100); //if currently displaying a msg wait for it to finish
-
-   bg=MENULINEBG;
-   fillRect(4,48,152,32,color565((bg>>16)&0xFF,(bg>>8)&0xFF,bg&0xFF));
-   
-   backcolour=bg; colour=fg;
-   colour=MENUFGLIGHT;
-   SymbolDisplay(8,56,typ); //exclaim
-   setxy(28,58); //***check for \n in string and position correctly
-   putstr(s);
-   backcolour=oldbg; colour=oldfg;
-   popuptimer=2000;
 }
 

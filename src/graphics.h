@@ -8,6 +8,8 @@
 #define VALIGN_BOTTOM 1
 #define VALIGN_CENTRE 2
 
+#define WIDTH 360
+#define HEIGHT 240
 
 extern unsigned int colour;
 extern unsigned int backcolour;
@@ -20,6 +22,8 @@ extern int fontsize;
 extern unsigned char Trigger;
 extern volatile uint8_t KeyHit, LastKey, KeyState, KdState, PrevKey, OpMode, KeyDn, DispBlanked;
 extern uint32_t KdTime, KeyDel, DispBlankTime;
+extern int _width;
+extern int _height;
 
 void OutputRemap(void);
 void setfont(char size, char style);
