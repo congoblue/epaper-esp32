@@ -26,7 +26,7 @@
 #define GEO_URL         "http://ip-api.com/json/?fields=status,city,lat,lon"
 #define WEATHER_URL     "https://api.open-meteo.com/v1/forecast?latitude=%.4f&longitude=%.4f" \
                         "&current=temperature_2m,wind_speed_10m,pressure_msl" \
-                        "&hourly=precipitation_probability,weather_code&forecast_hours=2&wind_speed_unit=mph&timezone=auto"
+                        "&hourly=temperature_2m,precipitation_probability,weather_code&forecast_hours=24&wind_speed_unit=mph&timezone=auto"
 #define NUM_HEADLINES   3
 #define TITLE_LEN       160
 #define WIFI_TIMEOUT_MS 20000
@@ -60,6 +60,7 @@ struct {
     float temp;         //C
     float wind;         //mph
     float pressure;     //hPa, sea level
+    float tmin, tmax;   //C, next 24 hours
     int rain;           //% chance in next hour
     const char *raintype;
     char place[32];
@@ -291,14 +292,21 @@ bool FetchWeather(void)
     JsonObject cur=doc["current"];
     JsonArray rain=doc["hourly"]["precipitation_probability"];
     JsonArray code=doc["hourly"]["weather_code"];
-    if (cur.isNull() || rain.isNull() || code.isNull()) return false;
+    JsonArray temps=doc["hourly"]["temperature_2m"];
+    if (cur.isNull() || rain.isNull() || code.isNull() || temps.size()==0) return false;
+    weather.tmin=weather.tmax=temps[0];
+    for (float t : temps)
+    {
+        weather.tmin=min(weather.tmin, t);
+        weather.tmax=max(weather.tmax, t);
+    }
     weather.temp=cur["temperature_2m"];
     weather.wind=cur["wind_speed_10m"];
     weather.pressure=cur["pressure_msl"];
     weather.rain=max(rain[0] | 0, rain[1] | 0); //next 60 mins spans this hour and the next
     weather.raintype=RainType(max(code[0] | 0, code[1] | 0)); //higher code is the worse weather
     weather.ok=true;
-    Serial.printf("%s: %.1fC, %.0fmph, %.0fhPa, %s %d%%\r\n", weather.place, weather.temp, weather.wind, weather.pressure, weather.raintype, weather.rain);
+    Serial.printf("%s: %.1fC (%.0f-%.0f), %.0fmph, %.0fhPa, %s %d%%\r\n", weather.place, weather.temp, weather.tmin, weather.tmax, weather.wind, weather.pressure, weather.raintype, weather.rain);
     return true;
 }
 
@@ -374,12 +382,29 @@ void DrawHeadlines(int count)
     wordwrap=1;
 }
 
+void FormatTemp(char *buf, int len, float t)
+{
+    snprintf(buf, len, "%.0f", t);
+    if (strcmp(buf, "-0")==0) strlcpy(buf, "0", len);
+}
+
+#define DEG_W 7     //width of small degree symbol
+
+//number then degree symbol and C at the current position, normal size
+void PutTempSmall(char *num, int y)
+{
+    putstr(num);
+    DrawCircle(xp+3, y+3, 2, COLORED);
+    setxy(xp+DEG_W, y);
+    putstr((char *)"C");
+}
+
 void DrawReading(const char *label, const char *value, int y)
 {
     setfont(14,6);
     PutStrCentred(label, WEATHER_CX, y);
     setfont(14,5);
-    PutStrCentred(value, WEATHER_CX, y+17);
+    PutStrCentred(value, WEATHER_CX, y+15);
 }
 
 void DrawWeather(void)
@@ -397,11 +422,10 @@ void DrawWeather(void)
     }
 
     //big temperature, 3x magnified, with a drawn degree symbol
-    snprintf(buf, sizeof(buf), "%.0f", weather.temp);
-    if (strcmp(buf, "-0")==0) strcpy(buf, "0");
+    FormatTemp(buf, sizeof(buf), weather.temp);
     w=3*linewidth(buf)+12+3*linewidth((char *)"C");
     x=WEATHER_CX-w/2;
-    y=HEADER_H+16;
+    y=HEADER_H+5;
     setxy(x,y);
     for (i=0; buf[i]!=0; i++) disp_putc_big(buf[i], 3);
     DrawCircle(xp+5, y+5, 4, COLORED);
@@ -409,19 +433,30 @@ void DrawWeather(void)
     setxy(xp+12, y);
     disp_putc_big('C', 3);
 
+    //24h min - max below, each with a small drawn degree symbol
+    char buf2[16];
+    FormatTemp(buf, sizeof(buf), weather.tmin);
+    FormatTemp(buf2, sizeof(buf2), weather.tmax);
+    w=linewidth(buf)+linewidth((char *)" - ")+linewidth(buf2)+2*(DEG_W+linewidth((char *)"C"));
+    y+=45;
+    setxy(WEATHER_CX-w/2, y);
+    PutTempSmall(buf, y);
+    putstr((char *)" - ");
+    PutTempSmall(buf2, y);
+
     //narrow panel, so label above value
-    y=HEADER_H+66;
+    y=HEADER_H+78;
     snprintf(buf, sizeof(buf), "%.0f mph", weather.wind);
     DrawReading("Wind", buf, y);
 
-    y+=46;
+    y+=44;
     snprintf(buf, sizeof(buf), "%.0f hPa", weather.pressure);
     DrawReading("Pressure", buf, y);
 
-    y+=46;
+    y+=44;
     DrawReading("Rain 1hr", weather.raintype, y);
     snprintf(buf, sizeof(buf), "%d%%", weather.rain);
-    PutStrCentred(buf, WEATHER_CX, y+34);
+    PutStrCentred(buf, WEATHER_CX, y+30);
 }
 
 void DrawScreen(int count)
