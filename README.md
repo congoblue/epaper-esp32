@@ -4,7 +4,7 @@ This project uses a Waveshare 3.52" e-Paper display to provide a dashboard scree
 I'm using it to show BBC headlines and weather but with a bit of adaption it
 could be used to show anything that's on the internet.
 
-!(Image of news screen)[/news.jpg]
+![Image of news screen](/news.jpg)
 
 I'm using an ESP32-S2 Saola board as I happened to have one lying around but with
 a bit of modification to the IO pins it should work with any ESP32 board.
