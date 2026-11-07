@@ -479,7 +479,7 @@ void opputc(char c)
              rc--;
            }
            //cc=color565(((pv*cr)>>8)+(((255-pv)*br)>>8),((pv*cg)>>8)+(((255-pv)*bg)>>8),((pv*cb)>>8)+(((255-pv)*bb)>>8));
-           cc=pv;
+           cc=((unsigned char)pv>=128)?colour:backcolour; //mono display, threshold the antialiased value
            drawPixel(xp+i,yp+j,cc);
         }
         drawPixel(xp+i,yp+j,backcolour); //1pix gap to right of char
@@ -527,7 +527,7 @@ void disp_putc_big(char c, char mag)
              rc--;
            }
            //cc=color565(((pv*cr)>>8)+(((255-pv)*br)>>8),((pv*cg)>>8)+(((255-pv)*bg)>>8),((pv*cb)>>8)+(((255-pv)*bb)>>8));
-           cc=pv;
+           cc=((unsigned char)pv>=128)?colour:backcolour; //mono display, threshold the antialiased value
 
            for (m=0; m<mag;m++) {for (my=0; my<mag; my++) DrawPixel(xp+i*mag+m,yp+j*mag+my,cc);}
         }
@@ -553,13 +553,13 @@ void wrap(char *c, char *out)
         wid=0;
         lastsp=0;
         plinestart=c;
-        while ((*c!=0)&&(*c!=13)&&(wid<((_width*16)+1)))
+        while ((*c!=0)&&(*c!=13)&&(wid<(_width+1)))
         {
            if (*c>=32) wid=wid+(pcurrentfont->w[(*c)-32])+1;
            if (*c==32) lastsp=c; //remember the pos of most recent space
            c++;
         }
-        if (wid>(_width*16)) //line ran over
+        if (wid>_width) //line ran over
         {
            if (lastsp!=0) //there was a space on the line
            {

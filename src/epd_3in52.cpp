@@ -268,14 +268,18 @@ void Epd::SendData(unsigned char data) {
 }
 
 /**
- *  @brief: Wait until the busy_pin goes HIGH
+ *  @brief: Wait until the busy_pin goes HIGH (BUSY_N is low while the panel is working)
  */
 void Epd::ReadBusy(void) {
     Serial.print("e-Paper busy \r\n ");
-    UBYTE busy;
+    unsigned long start = millis();
     do {
-        busy = DigitalRead(busy_pin);
-    } while(busy);    
+        SendCommand(0x71);
+        if (millis() - start > 30000) {
+            Serial.print("e-Paper busy timeout \r\n ");
+            break;
+        }
+    } while(DigitalRead(busy_pin) == LOW);
     DelayMs(200);
     Serial.print("e-Paper busy release \r\n ");
 }

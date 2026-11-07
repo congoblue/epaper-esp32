@@ -24,6 +24,8 @@ extern volatile uint8_t KeyHit, LastKey, KeyState, KdState, PrevKey, OpMode, Key
 extern uint32_t KdTime, KeyDel, DispBlankTime;
 extern int _width;
 extern int _height;
+extern int xp;
+extern int yp;
 
 void OutputRemap(void);
 void setfont(char size, char style);
@@ -32,6 +34,7 @@ unsigned int linewidth(char *c);
 void opclrscr(void);
 void UserRectClr(void);
 void disp_putc_big(char c, char mag);
+void wrap(char *c, char *out);
 void putstr(char *c);
 void putstr_align(char *c);
 void setxy(int x, int y);
