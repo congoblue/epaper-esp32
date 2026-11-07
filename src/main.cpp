@@ -30,7 +30,7 @@
 #define NUM_HEADLINES   3
 #define TITLE_LEN       160
 #define WIFI_TIMEOUT_MS 20000
-#define REFRESH_US      (60ULL*60*1000000)  //1 hour
+#define REFRESH_US      (30ULL*60*1000000)  //1 hour
 #define RETRY_US        (5ULL*60*1000000)   //5 mins after a failure
 
 // screen layout (rotated, WIDTH x HEIGHT)
