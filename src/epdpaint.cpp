@@ -47,20 +47,20 @@ void Clear(int colored) {
  *          this function won't be affected by the rotate parameter.
  */
 void DrawAbsolutePixel(int x, int y, int colored) {
-    if (x < 0 || x >= _width || y < 0 || y >= _height) {
+    if (x < 0 || x >= HEIGHT || y < 0 || y >= WIDTH) {
         return;
     }
     if (IF_INVERT_COLOR) {
         if (colored) {
-            image[(x + y * _width) / 8] |= 0x80 >> (x % 8);
+            image[(x + y * HEIGHT) / 8] |= 0x80 >> (x % 8);
         } else {
-            image[(x + y * _width) / 8] &= ~(0x80 >> (x % 8));
+            image[(x + y * HEIGHT) / 8] &= ~(0x80 >> (x % 8));
         }
     } else {
         if (colored) {
-            image[(x + y * _width) / 8] &= ~(0x80 >> (x % 8));
+            image[(x + y * HEIGHT) / 8] &= ~(0x80 >> (x % 8));
         } else {
-            image[(x + y * _width) / 8] |= 0x80 >> (x % 8);
+            image[(x + y * HEIGHT) / 8] |= 0x80 >> (x % 8);
         }
     }
 }
@@ -94,15 +94,15 @@ void DrawPixel(int x, int y, int colored) {
           return;
         }
         point_temp = x;
-        x = HEIGHT - y;
+        x = HEIGHT - 1 - y;
         y = point_temp;
         DrawAbsolutePixel(x, y, colored);
     } else if (rotate == ROTATE_180) {
         if(x < 0 || x >= HEIGHT || y < 0 || y >= WIDTH) {
           return;
         }
-        x = HEIGHT - x;
-        y = WIDTH - y;
+        x = HEIGHT - 1 - x;
+        y = WIDTH - 1 - y;
         DrawAbsolutePixel(x, y, colored);
     } else if (rotate == ROTATE_270) {
         if(x < 0 || x >= WIDTH || y < 0 || y >= HEIGHT) {
@@ -110,7 +110,7 @@ void DrawPixel(int x, int y, int colored) {
         }
         point_temp = x;
         x = y;
-        y = WIDTH - point_temp;
+        y = WIDTH - 1 - point_temp;
         DrawAbsolutePixel(x, y, colored);
     }
 }
