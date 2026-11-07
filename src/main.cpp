@@ -37,6 +37,11 @@
 #define SPLIT_X         240                 //divider between headlines (left 2/3) and weather (right 1/3)
 #define HEADER_H        25
 #define WEATHER_CX      ((SPLIT_X+WIDTH)/2)
+#define HEATING_Y       184                 //top of heating section, below headlines
+
+#ifndef HEATING_URL
+#define HEATING_URL     "http://192.168.1.240:8080/data"    //ebusd JSON
+#endif
 
 // LATITUDE, LONGITUDE and LOCATION_NAME can be defined in credentials.h,
 // otherwise location is looked up from the public IP address
@@ -65,6 +70,14 @@ struct {
     const char *raintype;
     char place[32];
 } weather;
+
+struct {
+    bool ok;
+    float room;         //C, NAN if missing
+    float hw;           //C
+    float press;        //bar
+    char state[16];
+} heating;
 
 
 // ----------------------------------------------------------------------------
@@ -202,8 +215,9 @@ int FetchHeadlines(void)
 // GET a url and parse the JSON response
 // ----------------------------------------------------------------------------
 
-bool GetJson(const char *url, JsonDocument &doc)
+bool GetJson(const char *url, JsonDocument &doc, JsonDocument *filter=NULL)
 {
+    DeserializationError err;
     WiFiClientSecure sclient;
     WiFiClient client;
     HTTPClient http;
@@ -222,10 +236,38 @@ bool GetJson(const char *url, JsonDocument &doc)
         http.end();
         return false;
     }
-    DeserializationError err=deserializeJson(doc, http.getStream());
+    if (filter) err=deserializeJson(doc, http.getStream(), DeserializationOption::Filter(*filter));
+    else err=deserializeJson(doc, http.getStream());
     http.end();
     if (err) Serial.printf("JSON error: %s\r\n", err.c_str());
     return !err;
+}
+
+// ----------------------------------------------------------------------------
+// Fetch boiler readings from ebusd
+// ----------------------------------------------------------------------------
+
+bool FetchHeating(void)
+{
+    JsonDocument doc, filter;
+
+    heating.ok=false;
+    //response is ~36k, only keep the fields we show
+    filter["350"]["messages"]["DisplayedRoomTemp"]["fields"]["temp"]["value"]=true;
+    filter["v65"]["messages"]["State"]["fields"]["temp"]["value"]=true;
+    filter["v65"]["messages"]["State"]["fields"]["state"]["value"]=true;
+    filter["bai"]["messages"]["WaterPressure"]["fields"]["press"]["value"]=true;
+    if (!GetJson(HEATING_URL, doc, &filter)) return false;
+
+    JsonObject state=doc["v65"]["messages"]["State"]["fields"];
+    heating.room=doc["350"]["messages"]["DisplayedRoomTemp"]["fields"]["temp"]["value"] | NAN;
+    heating.hw=state["temp"]["value"] | NAN;
+    heating.press=doc["bai"]["messages"]["WaterPressure"]["fields"]["press"]["value"] | NAN;
+    strlcpy(heating.state, state["state"]["value"] | "--", sizeof(heating.state));
+    heating.state[0]=toupper(heating.state[0]);
+    heating.ok=true;
+    Serial.printf("Heating: room %.1fC, HW %.1fC, %s, %.2fbar\r\n", heating.room, heating.hw, heating.state, heating.press);
+    return true;
 }
 
 // ----------------------------------------------------------------------------
@@ -355,7 +397,7 @@ void DrawHeadlines(int count)
 
     if (count==0)
     {
-        PutStrCentred("Unavailable", SPLIT_X/2, HEIGHT/2-7);
+        PutStrCentred("Unavailable", SPLIT_X/2, (HEADER_H+HEATING_Y)/2-7);
         return;
     }
 
@@ -364,11 +406,11 @@ void DrawHeadlines(int count)
     wordwrap=0;
     align=ALIGN_LEFT;
     y=HEADER_H+8;
-    for (i=0; i<count && y+lineh<=HEIGHT; i++)
+    for (i=0; i<count && y+lineh<=HEATING_Y-4; i++)
     {
         wrap(headlines[i], buf);
-        //cut off any lines that would run off the bottom of the screen
-        lines=(HEIGHT-y)/lineh;
+        //cut off any lines that would run into the heating section
+        lines=(HEATING_Y-4-y)/lineh;
         for (p=buf; *p!=0; p++)
         {
             if (*p==13 && --lines==0) {*p=0; break;}
@@ -459,6 +501,48 @@ void DrawWeather(void)
     PutStrCentred(buf, WEATHER_CX, y+30);
 }
 
+//label at x0, value right aligned to x1, value NAN shows as --
+void DrawHeatCell(const char *label, float value, const char *fmt, bool deg, int x0, int x1, int y)
+{
+    char buf[16];
+
+    setfont(14,6);
+    setxy(x0,y);
+    putstr((char *)label);
+    setfont(14,5);
+    if (isnan(value)) {PutStrRight("--", x1, y); return;}
+    snprintf(buf, sizeof(buf), fmt, value);
+    if (!deg) {PutStrRight(buf, x1, y); return;}
+    setxy(x1-linewidth(buf)-DEG_W-linewidth((char *)"C"), y);
+    PutTempSmall(buf, y);
+}
+
+void DrawHeating(void)
+{
+    const int y=HEATING_Y+20, mid=SPLIT_X/2;
+
+    DrawHorizontalLine(0, HEATING_Y-2, SPLIT_X, COLORED);
+    DrawHorizontalLine(0, HEATING_Y-1, SPLIT_X, COLORED);
+    setfont(14,5);
+    setxy(0, HEATING_Y+2);
+    putstr((char *)"Heating");
+
+    if (!heating.ok)
+    {
+        PutStrRight("Unavailable", SPLIT_X-4, HEATING_Y+2);
+        return;
+    }
+
+    DrawHeatCell("Room Temp", heating.room, "%.1f", true, 0, mid-8, y);
+    DrawHeatCell("HW Temp", heating.hw, "%.1f", true, mid+4, SPLIT_X-4, y);
+    setfont(14,6);
+    setxy(0, y+18);
+    putstr((char *)"Status");
+    setfont(14,5);
+    PutStrRight(heating.state, mid-8, y+18);
+    DrawHeatCell("Pressure", heating.press, "%.1f bar", false, mid+4, SPLIT_X-4, y+18);
+}
+
 void DrawScreen(int count)
 {
     Clear(UNCOLORED);
@@ -469,6 +553,7 @@ void DrawScreen(int count)
     valign=VALIGN_TOP;
 
     DrawHeadlines(count);
+    DrawHeating();
     DrawWeather();
 
     DrawHorizontalLine(0, HEADER_H-2, WIDTH, COLORED);
@@ -524,17 +609,18 @@ void setup() {
         configTzTime(TIMEZONE, NTP_SERVER); //syncs in the background while we fetch
         count=FetchHeadlines();
         FetchWeather();
+        FetchHeating();
         GetFetchTime();
     }
 
-    if (count>0 || weather.ok)
+    if (count>0 || weather.ok || heating.ok)
     {
         DrawScreen(count);
         ShowScreen();
-        Sleep((count>0 && weather.ok) ? REFRESH_US : RETRY_US);
+        Sleep((count>0 && weather.ok && heating.ok) ? REFRESH_US : RETRY_US);
     }
 
-    DrawMessage(WiFi.status()==WL_CONNECTED ? "Could not load headlines or weather" : "WiFi connection failed");
+    DrawMessage(WiFi.status()==WL_CONNECTED ? "Could not load any data" : "WiFi connection failed");
     ShowScreen();
     Sleep(RETRY_US);
 }
