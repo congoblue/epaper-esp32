@@ -30,7 +30,7 @@
 #define NUM_HEADLINES   3
 #define TITLE_LEN       160
 #define WIFI_TIMEOUT_MS 20000
-#define REFRESH_US      (30ULL*60*1000000)  //1 hour
+#define REFRESH_US      (30ULL*60*1000000)  //30 mins
 #define RETRY_US        (5ULL*60*1000000)   //5 mins after a failure
 
 // screen layout (rotated, WIDTH x HEIGHT)
@@ -89,6 +89,7 @@ bool ConnectWiFi(void)
     uint32_t start=millis();
 
     WiFi.mode(WIFI_STA);
+    WiFi.setSleep(false); //modem sleep stalls large downloads, we're only awake briefly anyway
     WiFi.begin(SSID, PWD);
     Serial.print("Connecting to WiFi");
     while (WiFi.status()!=WL_CONNECTED)
@@ -236,10 +237,13 @@ bool GetJson(const char *url, JsonDocument &doc, JsonDocument *filter=NULL)
         http.end();
         return false;
     }
-    if (filter) err=deserializeJson(doc, http.getStream(), DeserializationOption::Filter(*filter));
-    else err=deserializeJson(doc, http.getStream());
+    //read the whole body first, parsing straight from the stream gave IncompleteInput on large responses
+    String body=http.getString();
+    int expected=http.getSize();
     http.end();
-    if (err) Serial.printf("JSON error: %s\r\n", err.c_str());
+    if (filter) err=deserializeJson(doc, body, DeserializationOption::Filter(*filter));
+    else err=deserializeJson(doc, body);
+    if (err) Serial.printf("JSON error: %s (got %u of %d bytes)\r\n", err.c_str(), body.length(), expected);
     return !err;
 }
 
