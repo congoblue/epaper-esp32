@@ -553,13 +553,13 @@ void wrap(char *c, char *out)
         wid=0;
         lastsp=0;
         plinestart=c;
-        while ((*c!=0)&&(*c!=13)&&(wid<(_width+1)))
+        while ((*c!=0)&&(*c!=13)&&(wid<_width))
         {
            if (*c>=32) wid=wid+(pcurrentfont->w[(*c)-32])+1;
            if (*c==32) lastsp=c; //remember the pos of most recent space
            c++;
         }
-        if (wid>_width) //line ran over
+        if (wid>=_width) //line ran over (opputc wraps itself at _width)
         {
            if (lastsp!=0) //there was a space on the line
            {
